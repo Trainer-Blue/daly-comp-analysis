@@ -1,0 +1,44 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+env/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local IDE settings
+.vscode/
+.idea/
+
+# Build / packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Project outputs
+/data/features/
+/data/models/
+/data/results/
+
+# Logs and scratch files
+*.log
+.DS_Store
+
+# BIDS raw data
+sub-*/
+*.edf
+
+# Music data
+data/music/
+**/*.mp3
+**/*.wav
+
+data/sub-*/
