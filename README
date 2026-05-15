@@ -1,73 +1,78 @@
-0. Sections
-------------
-1. Project
-2. Dataset
-3. Terms of Use
-4. Contents
-5. Method and Processing
-1. PROJECT
-------------
 
-Title: Brain-Computer Music Interface for Monitoring and Inducing Affective States (BCMI-MIdAS)
+# Cross-Subject Music-Emotion Prediction: Project README
 
-Dates: 2012-2017
+## Project Overview
 
-Funding organisation: Engineering and Physical Sciences Research Council (EPSRC)
+This project investigates the generalizability of machine learning models for predicting music-induced emotions from EEG and acoustic features, using the OpenNeuro ds002721 dataset. Unlike prior work that focused on within-subject validation (which can overfit to individual brain signatures), we implement a **Leave-One-Subject-Out (LOSO)** cross-validation strategy to benchmark real-world, zero-calibration performance for unseen users.
 
-Grant no.: EP/J003077/1 and EP/J002135/1.
+**Key Goals:**
+- Bridge the gap between "lab-accurate" and deployable models for neurotechnology and music-therapy applications.
+- Prevent data leakage by ensuring models are never trained and tested on the same subject.
+- Compare interpretable (Lasso), robust (Random Forest), and state-of-the-art (XGBoost) regression models.
 
-2. DATASET
-------------
-Title: EEG data investigating neural correlates of music-induced emotion.
+## Dataset
 
-Description: This dataset accompanies the publication by Daly et al. (2018) and has been analysed in Daly et al. (2014; 2015a; 2015b) (please see Section 5 for full references). The purpose of the research activity in which the data were collected was to investigate the EEG neural correlates of music-induced emotion. For this purpose 31 healthy adult participants listened to 40 music clips of 12 s duration each, targeting a range of emotional states. The music clips comprised excerpts from film scores spanning a range of styles and rated on induced emotion. 
-The dataset contains unprocessed EEG data from all 31 participants (age range 18-66, 18 female) while listening to the music clips, together with the reported induced emotional responses . The paradigm involved 6 runs of EEG recordings. The first and last runs were resting state runs, during which participants were instructed to sit still and rest for 300 s. The other 4 runs each contained 10 music listening trials.
+- **Source:** [OpenNeuro ds002721](https://openneuro.org/datasets/ds002721) (Daly et al., 2015)
+- **Subjects:** 31 healthy adults, 6 runs each (resting state + music listening)
+- **EEG:** 19 channels, 1000 Hz, BIDS format, ~3.6 GB EDF files
+- **Stimuli:** 40 film soundtrack clips (Eerola & Vuoskoski, 2010, Set 1)
+- **Emotion Ratings:** 8 Likert scales per clip, mapped to Valence/Energy/Tension via PCA
+- **Audio Features:** 360 MP3s, MFCCs, Chroma, BPM, etc.
 
-Publication Year: 2018
+## Methodology
 
-Creator: Nicoletta Nicolaou, Ian Daly.
+### Validation: Leave-One-Subject-Out (LOSO)
+For $N$ subjects, train on $N-1$ and test on the $N^{th}$ subject. Repeat for all subjects. This prevents the model from memorizing individual EEG baselines and tests true generalizability.
 
-Contributors: Isil Poyraz Bilgin, James Weaver, Asad Malik. 
+### Models Compared
+- **Lasso Regression:** Interpretable, automatic feature selection (Krish, 2021)
+- **Random Forest:** Robust to artifacts/outliers
+- **XGBoost:** State-of-the-art for tabular data
 
-Principal Investigator: Slawomir Nasuto (EP/J003077/1).
+### Feature Engineering
+- **EEG:** Band power, Hjorth parameters, DWT features
+- **Audio:** MFCCs, Chroma, BPM, Key, etc.
+- **Combined:** All features concatenated for multimodal prediction
 
-Co-Investigator: Eduardo Miranda (EP/J002135/1).
+## Project Structure
 
-Organisation: University of Reading
+```
+daly-comp-analysis/
+├── notebooks/                  # 01_eda_raw_data to 05_model_xgboost
+├── src/                       # eeg_utils, audio_utils, features, models, viz
+├── data/                      # features/, models/, results/ (git-ignored)
+├── requirements.txt           # Python dependencies
+├── .gitignore
+├── research/                  # research_log.md, plan.md
+└── ...
+```
 
-Rights-holders: University of Reading
+## Getting Started
 
-Source: The musical stimuli were taken from Eerola & Vuoskoski, “A comparison of the discrete and dimensional models of emotion in music”, Psychol. Music, 39:18-49, 2010 (doi: 10.1177/0305735610362821). Stimuli set 1 was used (https://www.jyu.fi/hytk/fi/laitokset/mutku/en/research/projects2/past-projects/coe/materials/emotion/soundtracks/set1/view)
+1. **Clone the repo and set up Python 3.14+ venv**
+2. `pip install -r requirements.txt`
+3. Download EEG data using git-annex (see research_log.md for details)
+4. Run notebooks in order:
+	- 01_eda_raw_data.ipynb: Explore raw EEG, events, and audio mapping
+	- 02_feature_engineering.ipynb: Extract features (EEG + audio)
+	- 03_model_lasso.ipynb: LOSO Lasso regression
+	- 04_model_random_forest.ipynb: LOSO Random Forest
+	- 05_model_xgboost.ipynb: LOSO XGBoost
 
-System: The data is prepared for use on Windows systems and no garanantee is made that the datasets can be opened correctly on other systems.
+## Dependencies
 
-3. TERMS OF USE
------------------
+See `requirements.txt` for full list. Core packages:
+- mne, librosa, numpy, pandas, scikit-learn, xgboost, matplotlib, seaborn, jupyterlab, tqdm, scipy
 
-Copyright University of Reading, 2018. This dataset is licensed by the rights-holder(s) under a Creative Commons Attribution 4.0 International Licence: https://creativecommons.org/licenses/by/4.0/.
+## Progress & Status
 
-4. CONTENTS
-------------
+See `research/research_log.md` for detailed daily progress, literature review, and technical notes.
 
-BIDS File listing:
-The dataset comprises data from 31 participants, named using the convention:
-sub_s_number
-where: s_number is a random participant number from 1 to 31. For example: ‘sub-08’ contains data obtained from participant 8. 
+## References
 
-The data is BIDS format and contains EEG and associated meta data. The sampling rate is 1 kHz and the EEG corresponding to a music clip is 20 s long (the duration of the clips).
+- Daly, I. et al. (2015). Music-induced emotions can be predicted from a combination of brain activity and acoustic features. Brain and Cognition, 101:1-11.
+- Krish, S. (2021). Using a Combination of Electroencephalographic and Acoustic Features to Predict Music-Induced Emotions. [Thesis]
+- Eerola, T. & Vuoskoski, J.K. (2010). A comparison of the discrete and dimensional models of emotion in music. Psychol. Music, 39:18-49.
 
-Each data folder contains the following data (please note that the number of runs varies between participants):
-
-5. METHOD and PROCESSING
---------------------------
-
-This information is available in the following publications:
-
-[1] Daly, I., Nicolaou, N., Williams, D., Hwang, F., Kirke, A., Miranda, E., Nasuto, S.J., Ԏeural and physiological data from participants listening to affective musicԬ Scientific Data, 2018.
-[2] Daly, I., Malik, A., Hwang, F., Roesch, E., Weaver, J., Kirke, A., Williams, D., Miranda, E. R., Nasuto, S. J., Ԏeural correlates of emotional responses to music: an EEG studyԬ Neuroscience Letters, 573: 52-7, 2014; doi: 10.1016/j.neulet.2014.05.003.
-[3] Daly, I., Hallowell, J., Hwang, F., Kirke, A., Malik, A., Roesch, E., Weaver, J., Williams, D., Miranda, E., Nasuto, S.J., ԃhanges in music tempo entrain movement related brain activityԬ Proc. IEEE EMBC 2014, pp.4595-8; doi: 10.1109/EMBC.2014.6944647
-[4] Daly, I., Williams, D., Hallowell, J., Hwang, F., Kirke, A., Malik, A., Weaver, J., Miranda, E., Nasuto, S.J., ԍusic-induced emotions can be predicted from a combination of brain activity and acoustic featuresԬ Brain and Cognition, 101:1-11, 2015b; doi: 10.1016/j.bandc.2015.08.003
-
-Please cite these references if you use this dataset in your study.
-
-Thank you for your interest in our work.
+---
+For questions, see the research log or contact me on linkedin/twitter.

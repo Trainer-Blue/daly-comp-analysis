@@ -129,12 +129,29 @@ Since you're on **Fedora**, are you planning to use a specific IDE or notebook s
 
 * **Project Structure Designed:**
 daly-comp-analysis/
-├── env/ # Python venv (git-ignored)
-├── notebooks/ # 01_eda_raw_data through 05_model_xgboost
-├── src/ # eeg_utils, audio_utils, features, models, viz
-├── data/ # features/, models/, results/ (git-ignored)
+├── env/                        # Python venv (git-ignored)
+├── notebooks/                  # All .ipynb notebooks
+│   ├── 01_eda_raw_data.ipynb
+│   ├── 02_feature_engineering.ipynb
+│   ├── 03_model_lasso.ipynb
+│   ├── 04_model_random_forest.ipynb
+│   └── 05_model_xgboost.ipynb
+├── src/                        # Reusable Python modules
+│   ├── __init__.py
+│   ├── eeg_utils.py            # MNE-based EEG loading, filtering, epoching
+│   ├── audio_utils.py          # Librosa-based MFCC/spectral extraction
+│   ├── features.py             # Feature engineering pipeline
+│   ├── models.py               # Lasso, RF, XGBoost + LOSO logic
+│   └── viz.py                  # Plotting helpers
+├── data/                       # Processed outputs (git-ignored)
+│   ├── features/               # Extracted feature CSVs
+│   ├── models/                 # Saved model artifacts
+│   └── results/                # Metrics CSVs, figures
 ├── requirements.txt
-└── .gitignore
+├── .gitignore
+├── research/
+├── sub-01/ ... sub-31/         # Raw BIDS data (keep as-is)
+└── code/
 
 
 * **Notes:**
@@ -176,3 +193,20 @@ daly-comp-analysis/
   * Cell 5: Loads event markers from TSV; displays first 10 rows and unique trial codes; plots raw 19-channel EEG with 10-second window and auto-scaling.
 
 * **Next Steps:** Execute Notebook 01 cells to confirm data loading pipeline works end-to-end. Then design and implement Notebook 02 (Feature Engineering: Band Power, Hjorth Parameters, MFCCs).
+
+---
+
+### Day 4: [May 15, 2026] - Goal Refinement & Feature Strategy
+
+* **Status:** Solidified feature engineering strategy based on Daly (2015) vs Krish (2021) methodologies.
+* **Tasks Completed:**
+  * [x] Reviewed literature feature selections: Identified that Krish's massive performance boost (from r=0.24 to r=0.77) relied heavily on **Hjorth Mobility** and **Entropy** rather than standard band-powers.
+  * [x] Analyzed label distribution (`mean_ratings_set1.csv`): Discovered items 001–060 distinctly capture valence extremes (1-30 = HAPPY, 31-60 = SAD). While this enables binary classification, significant within-class variability in continuous `valence`, `energy`, and `tension` ratings exists. This validates our choice to use continuous regression (predicting the PCs) over simple binary labels, allowing us to exploit the full signal variation.
+  * [x] Formalized our Feature Superset: We will extract both Daly's asymmetry/band-powers and Krish's Wavelet-based Hjorth/Entropy features.
+  * [x] Finalized Targets: We will regress onto the 3 Principal Components (Valence, Energy, Tension) instead of binary classification to maintain a direct mathematical comparison with the literature.
+  * [x] Reaffirmed LOSO necessity: The primary aim is to test if Krish's high correlation metrics collapse under strict Leave-One-Subject-Out (LOSO) cross-validation (i.e., proving within-subject testing was overfitting).
+
+* **Next Pipeline Goals:**
+  1. Map the event TSV files specifically to the correct 15-second EEG epochs post-stimulus.
+  2. Implement an artifact rejection pipeline (dropping trials with > ±100 µV amplitude to match Daly).
+  3. Write the MNE-based feature extraction script (Notebook 02) calculating Hjorth params, band powers, and extracting audio MFCC/Chroma.
