@@ -210,3 +210,46 @@ daly-comp-analysis/
   1. Map the event TSV files specifically to the correct 15-second EEG epochs post-stimulus.
   2. Implement an artifact rejection pipeline (dropping trials with > ±100 µV amplitude to match Daly).
   3. Write the MNE-based feature extraction script (Notebook 02) calculating Hjorth params, band powers, and extracting audio MFCC/Chroma.
+
+---
+
+### Day 5: [May 17, 2026] - Feature Engineering Implementation & Documentation
+
+* **Status:** Built the MNE and Librosa feature extraction pipelines and deployed Notebook 02.
+* **Tasks Completed:**
+  * [x] Mapped true timings using `events.tsv` and cut continuous EEG into 15-second response epochs.
+  * [x] Implemented signal quality control: Rejects artifact-heavy trials (> ±100 µV threshold) as per Daly's methodology.
+  * [x] Designed custom EEG feature extraction pulling 133 neural features per trial.
+  * [x] Designed acoustic feature extraction returning 66 audio features per trial. 
+  * [x] Merged these onto the common `track_id` to build the overarching Input Features table (`X`).
+
+* **Feature Set Breakdown, Mathematics, & Intuition:**
+
+  Our final model inputs are composed of exactly **199 predictive features (133 EEG + 66 Audio)** per trial. We selected a highly specialized subset based on the predictive power highlighted in Daly (2015) and Krish (2021), rather than taking the exhaustive approach of generating ~400+ features and risking the curse of dimensionality. 
+
+  **1. EEG Features (133 total) - Calculated across all 19 recorded 10-20 channels:**
+  
+  * **Hjorth Mobility (19 features):**
+    * *Intuition:* Measures the mean frequency of the signal. It acts as a normalized "slope descriptor." Krish (2021) isolated Hjorth Mobility specifically as the absolute most predictive EEG feature for decoding emotion, vastly outperforming raw power.
+    * *Formula:* $\text{Mobility}(x) = \sqrt{\frac{\text{Var}(x')}{\text{Var}(x)}}$ (where $x'$ is the first derivative of the EEG signal $x$).
+  * **Hjorth Complexity (19 features):**
+    * *Intuition:* Represents the change in frequency (form measure), describing how closely the signal shape resembles a pure sine wave.
+    * *Formula:* $\text{Complexity}(x) = \frac{\text{Mobility}(x')}{\text{Mobility}(x)}$
+  * **Absolute Band Powers (95 features):** 
+    * *Intuition:* Quantifies the raw energy presence within the 5 standard neural oscillatory rhythms: Delta (0.5-4 Hz), Theta (4-8 Hz), Alpha (8-13 Hz), Beta (13-30 Hz), and Gamma (30-80 Hz). High Beta/Gamma over frontal networks correlates heavily to arousal-energy (Daly, 2015).
+    * *Formula:* Computed using Welch's method via the integral of the Power Spectral Density (PSD) within the defined frequency bounds: $P_{band} = \int_{f_{min}}^{f_{max}} S_{xx}(f) df$.
+
+  **2. Acoustic Features (66 total) - Extracted from the `ds002721` MP3 clips:**
+  
+  * **Mel-Frequency Cepstral Coefficients (MFCCs) (40 features: 20 Mean + 20 Std):**
+    * *Intuition:* MFCCs mimic the non-linear human auditory system's perception of sound. They mathematically describe the "timbre" or "texture" of the music. Included in both Krish and Daly methodologies as a fundamental necessity.
+    * *Formula:* Derived from taking the Discrete Cosine Transform (DCT) of a mel-scaled log power spectrum.
+  * **Chroma Features (24 features: 12 Mean + 12 Std):**
+    * *Intuition:* Captures harmonic and melodic characteristics by mapping the audio spectrum onto the 12 distinct pitch classes (C, C#, D, etc.) of the musical octave. Useful since "Key" and Tonal variations directly heavily impact Valence (Krish, 2021).
+  * **Spectral Centroid (1 feature: Mean):**
+    * *Intuition:* Indicates where the "center of mass" of the spectrum is located, correlating to the perceptual "brightness" of the sound.
+    * *Formula:* $SC = \frac{\sum_{n=0}^{N-1} f(n)x(n)}{\sum_{n=0}^{N-1} x(n)}$
+  * **RMS Energy (1 feature: Mean):**
+    * *Intuition:* Calculated from the audio samples directly, it approximates the perceived loudness or intensity of the clip, correlating directly with Schimmack & Grob's Energy-Arousal dimension.
+
+* **Next Steps:** Complete the generation of the final CSV dataset containing these 199 features mapped to the target PC ratings for every valid epoch. Then, construct the baseline Lasso model with Leave-One-Subject-Out (LOSO) validation.
