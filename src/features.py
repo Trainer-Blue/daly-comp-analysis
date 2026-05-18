@@ -48,7 +48,7 @@ def calculate_band_powers(data, sfreq=500.0):
     band_powers = {}
     for band_name, (fmin, fmax) in bands.items():
         idx = np.logical_and(freqs >= fmin, freqs <= fmax)
-        band_power = scipy.integrate.simps(psd[idx], freqs[idx])
+        band_power = scipy.integrate.simpson(y=psd[idx], x=freqs[idx])
         band_powers[band_name] = band_power
         
     return band_powers
@@ -60,7 +60,7 @@ def extract_eeg_features_from_epochs(epochs):
     """
     data = epochs.get_data() # Shape: (n_epochs, n_channels, n_times)
     ch_names = epochs.ch_names
-    event_ids = epochs.events[:, 2] # the 301-360 codes
+    event_ids = epochs.events[:, 2] # the 301-660 codes
     sfreq = epochs.info['sfreq']
     
     features_list = []

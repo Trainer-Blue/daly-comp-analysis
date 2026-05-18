@@ -253,3 +253,21 @@ daly-comp-analysis/
     * *Intuition:* Calculated from the audio samples directly, it approximates the perceived loudness or intensity of the clip, correlating directly with Schimmack & Grob's Energy-Arousal dimension.
 
 * **Next Steps:** Complete the generation of the final CSV dataset containing these 199 features mapped to the target PC ratings for every valid epoch. Then, construct the baseline Lasso model with Leave-One-Subject-Out (LOSO) validation.
+
+### Day 6: [May 20, 2026] - 
+## Discovery regarding Event Codes
+During the pipeline execution, it was discovered that the prior mapping in the journal which stated music trial types ranged from `301-360` was incorrect. The actual range is `301-660`. The dataset contains exactly 360 music tracks, but the event trigger IDs for these tracks are calculated as `TrackID + 300`, so they extend up to 660. The references in notebooks and `src/eeg_utils.py` have been corrected.
+
+*Note on event 1092:* In the event logs, there are occasional instances of `1092` before standard questions are asked. Given the lack of documentation in `events.json`, we hypothesize this is likely an unmapped trigger marker indicating a "Question Prompt Loading" / "Rating Screen Appearing" event, as it usually precedes `800-807` question markers.*
+
+## Feature Engineering Pipeline & Artifact Rejection Debugging
+We successfully built out the feature extraction pipeline in `02_feature_engineering.ipynb`, combining the EEG epoch processing with the Audio (librosa) processing, but encountered several technical hurdles regarding data dropping and version tracking:
+
+1. **The "100% Epoch Drop" Problem:** 
+   * When initially running the epoching code, every single 15-second EEG epoch was dropped.
+   * *Root Cause 1 (DC Drift):* The raw EEG was not being bandpass filtered. Over a 15-second window, slow physiological DC drift caused peak-to-peak amplitudes to naturally wander out of bounds. This was fixed by applying a `0.5 Hz - 45.0 Hz` zero-phase bandpass filter prior to epoching.
+   * *Root Cause 2 (Blinks & Thresholding):* Eye blinks (captured prominently on electrodes FP1, FP2, F7, F8) generate massive 200-400 µV spikes. A subject will almost certainly blink during a 15-second window. The simple ±100 µV threshold was discarding the entire music block for a single blink.
+2. **Implementing ICA:** To match Daly et al.'s methodology, we implemented Independent Component Analysis (ICA) using FastICA. The new `perform_ica` function automatically sets `FP1` as a surrogate EOG (electrooculogram), identifies the components corresponding to the eye blink signatures, and subtracts them mathematically from the remaining electrodes without destroying the 15-second brainwave segment. We then relaxed the final physical disconnect threshold to 300 µV Peak-to-Peak.
+3. **Scipy Version Conflicts:** Encountered `AttributeError: module 'scipy.integrate' has no attribute 'simps'`. The Simpson's rule function is named `simpson` in modern Scipy (v1.14+). Fixed in `src/features.py`.
+4. **Data Merging Logic:** When attempting to test the `pd.merge` of the EEG ML features and the Audio ML features on `track_id`, it yielded 0 rows because the example audio file (`005.mp3`) didn't actually play during the test subject's `run2` block. Updated the notebook to use track `062.mp3` and the 1x200 combined array mapped perfectly.
+5. **Visualizations Added:** Introduced visualization cells in the notebook to plot the processing stages. EEG now shows a 3-step plot: (1) Raw Wandering EEG, (2) Bandpass Filtered Snapped-to-Zero, and (3) Post-ICA Microscopic Brainwaves. The Audio visualization plots the Raw Sound Waveform, Mel-Frequency Cepstral Coefficients (MFCCs), and Chromagram mathematically mapping harmonic pitches.
