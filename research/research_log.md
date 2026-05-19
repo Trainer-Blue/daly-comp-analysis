@@ -9,7 +9,7 @@
 
 ## 1. Problem Statement & Motivation
 
-Existing literature (Daly et al., 2015; Krish, 2021) has established that EEG signals combined with acoustic features can predict emotional states (Valence/Arousal). However, these studies primarily utilized **within-subject** validation (k-fold), which often captures individual physiological "fingerprints" rather than universal emotional biomarkers.
+Existing literature (Daly et al., 2015; Krish, 2021) has established that EEG signals combined with acoustic features can predict emotional states (Valence/Arousal). However, these studies primarily utilized **within-subject** validation (k-fold)#TOUND, which often captures individual physiological "fingerprints" rather than universal emotional biomarkers.
 
 **The Goal:** To bridge the gap between "lab-accurate" models and "real-world" applications by evaluating model performance on **unseen subjects**. This is critical for neuro-technological systems (like the NeuroSync proposal) where zero-calibration for new users is the primary deployment hurdle.
 
@@ -74,12 +74,6 @@ We compare three distinct algorithmic architectures to establish a performance b
 * **Next Steps:** Download full raw EEG data (~31 subjects) and begin first-pass visualization of subject-01.
 
 ---
-
-### Tips for your Mentor:
-
-When you show them this, emphasize that you aren't just "running code." You are **validating an assumption** (that LOSO is harder but more realistic than k-fold). Professors love it when a student acknowledges the flaws in previous papers (like the data leakage/random split issue) and tries to fix them.
-
-Since you're on **Fedora**, are you planning to use a specific IDE or notebook setup (like VS Code or Jupyter) for the visualization phase tomorrow?
 
 ### Day 2: [May 10, 2026] - Dataset Exploration & Literature Review
 
@@ -271,3 +265,19 @@ We successfully built out the feature extraction pipeline in `02_feature_enginee
 3. **Scipy Version Conflicts:** Encountered `AttributeError: module 'scipy.integrate' has no attribute 'simps'`. The Simpson's rule function is named `simpson` in modern Scipy (v1.14+). Fixed in `src/features.py`.
 4. **Data Merging Logic:** When attempting to test the `pd.merge` of the EEG ML features and the Audio ML features on `track_id`, it yielded 0 rows because the example audio file (`005.mp3`) didn't actually play during the test subject's `run2` block. Updated the notebook to use track `062.mp3` and the 1x200 combined array mapped perfectly.
 5. **Visualizations Added:** Introduced visualization cells in the notebook to plot the processing stages. EEG now shows a 3-step plot: (1) Raw Wandering EEG, (2) Bandpass Filtered Snapped-to-Zero, and (3) Post-ICA Microscopic Brainwaves. The Audio visualization plots the Raw Sound Waveform, Mel-Frequency Cepstral Coefficients (MFCCs), and Chromagram mathematically mapping harmonic pitches.
+
+### Day 7: [May 19, 2026] - Resolving the Subjective vs. Objective Label Discrepancy
+
+* **Status:** Discovered hidden behavioral data; updating pipeline to a "Dual-Target" prediction task.
+* **Tasks Completed:**
+  * [x] Traced the event log discrepancies and discovered the individual participant emotion ratings are not missing—they are actively encoded into the `*events.tsv` files as trigger pairs (questions `800-807` + answers `901-909`).
+  * [x] Ran a validation script across all 185 TSV event files to check data completeness: 
+    * Total Music Events: 1,240
+    * Complete Responses (8+ Q&A pairs): 998 (80.5%)
+    * Incomplete Responses: 242 (19.5%)
+  * [x] Re-assessed the literature: Krish (2021) and Daly (2015) successfully ran PCA over these exact individual self-reported responses to derive the 3 Principal Components (Valence, Energy, Tension). Any epoch missing the full 8 questions (the 242 incomplete trials) will be discarded.
+  * [x] Defined Dual-Target Modeling Strategy: To strengthen our analysis, we will map *both* outputs for every valid epoch:
+    * **Target A (Objective Vibe):** Mapped from Eerola (2010) via `mean_ratings_set1.csv`.
+    * **Target B (Subjective Reaction):** Computed dynamically via Scikit-Learn PCA on the extracted 8-question matrices per individual subject.
+
+* **Next Steps:** Modify `src/eeg_utils.py` to extract the `9xx` answers dynamically. Implement PCA in Notebook 02 to construct the 3 PC targets for Target B. Then, compare the cross-subject generalizability between models trained on objective song characteristics vs models trained on individualized brain reactions.
