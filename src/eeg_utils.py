@@ -83,3 +83,47 @@ def reject_artifacts(epochs, threshold_uv=200):
     epochs.drop_bad(reject=reject_criteria, verbose='INFO')
     
     return epochs
+
+def extract_subjective_ratings(events_df):
+    """
+    Scans the events dataframe for music events (301-660) and 
+    extracts the subjective ratings from the subsequent questions (800-807).
+    Answers are coded as 901-909 (1 to 9 Likert scale).
+    If a question is missing or not answered, it is left as np.nan.
+    
+    Returns:
+        pd.DataFrame: A dataframe containing 'track_id' and rating columns Q800 to Q807.
+    """
+    ratings_list = []
+    
+    music_indices = events_df.index[(events_df['trial_type'] >= 301) & (events_df['trial_type'] <= 660)].tolist()
+    
+    for i, music_idx in enumerate(music_indices):
+        track_id = int(events_df.loc[music_idx, 'trial_type']) - 300
+        
+        start_idx = music_idx + 1
+        end_idx = music_indices[i+1] if i + 1 < len(music_indices) else len(events_df)
+        
+        window = events_df.iloc[start_idx:end_idx]
+        
+        ans_dict = {f'Q{q}': np.nan for q in range(800, 808)}
+        ans_dict['event_idx'] = music_idx
+        ans_dict['track_id'] = track_id
+        
+        q_indices = window.index[(window['trial_type'] >= 800) & (window['trial_type'] <= 807)].tolist()
+        
+        for q_idx in q_indices:
+            q_code = int(events_df.loc[q_idx, 'trial_type'])
+            ans_search_window = events_df.iloc[q_idx : min(q_idx + 3, len(events_df))]
+            ans_event = ans_search_window[(ans_search_window['trial_type'] >= 901) & (ans_search_window['trial_type'] <= 909)]
+            
+            if not ans_event.empty:
+                ans_code = int(ans_event.iloc[0]['trial_type'])
+                rating = ans_code - 900
+                # only keep first answer to avoid overwriting with subsequent accidental presses
+                if np.isnan(ans_dict[f'Q{q_code}']):
+                    ans_dict[f'Q{q_code}'] = rating
+                
+        ratings_list.append(ans_dict)
+        
+    return pd.DataFrame(ratings_list)

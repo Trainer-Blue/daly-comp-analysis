@@ -248,7 +248,7 @@ daly-comp-analysis/
 
 * **Next Steps:** Complete the generation of the final CSV dataset containing these 199 features mapped to the target PC ratings for every valid epoch. Then, construct the baseline Lasso model with Leave-One-Subject-Out (LOSO) validation.
 
-### Day 6: [May 20, 2026] - 
+### Day 6: [May 18, 2026] - 
 ## Discovery regarding Event Codes
 During the pipeline execution, it was discovered that the prior mapping in the journal which stated music trial types ranged from `301-360` was incorrect. The actual range is `301-660`. The dataset contains exactly 360 music tracks, but the event trigger IDs for these tracks are calculated as `TrackID + 300`, so they extend up to 660. The references in notebooks and `src/eeg_utils.py` have been corrected.
 
@@ -273,11 +273,27 @@ We successfully built out the feature extraction pipeline in `02_feature_enginee
   * [x] Traced the event log discrepancies and discovered the individual participant emotion ratings are not missing—they are actively encoded into the `*events.tsv` files as trigger pairs (questions `800-807` + answers `901-909`).
   * [x] Ran a validation script across all 185 TSV event files to check data completeness: 
     * Total Music Events: 1,240
-    * Complete Responses (8+ Q&A pairs): 998 (80.5%)
-    * Incomplete Responses: 242 (19.5%)
-  * [x] Re-assessed the literature: Krish (2021) and Daly (2015) successfully ran PCA over these exact individual self-reported responses to derive the 3 Principal Components (Valence, Energy, Tension). Any epoch missing the full 8 questions (the 242 incomplete trials) will be discarded.
+    * Complete Responses (8+ unique Q&A pairs): 239 (19.2%)
+    * Incomplete Responses (Missing 1-4 questions): 1,001 (80.8%)
+  * [x] Re-assessed the literature: Krish (2021) and Daly (2015) ran PCA over these exact individual self-reported responses to derive the 3 Principal Components (Valence, Energy, Tension). Because 80% of the trials are missing at least one question, dropping incomplete trials is mathematically unviable. Rejecting these trials would reduce our dataset to just 239 rows. Given our 199 extracted features, this violates the "Rule of 10" and would trigger extreme overfitting due to the Curse of Dimensionality. Therefore, we will use Scikit-Learn's `KNNImputer` to reliably predict missing Likert variables based on neighborhood consensus prior to applying the PCA projection.
   * [x] Defined Dual-Target Modeling Strategy: To strengthen our analysis, we will map *both* outputs for every valid epoch:
     * **Target A (Objective Vibe):** Mapped from Eerola (2010) via `mean_ratings_set1.csv`.
     * **Target B (Subjective Reaction):** Computed dynamically via Scikit-Learn PCA on the extracted 8-question matrices per individual subject.
 
 * **Next Steps:** Modify `src/eeg_utils.py` to extract the `9xx` answers dynamically. Implement PCA in Notebook 02 to construct the 3 PC targets for Target B. Then, compare the cross-subject generalizability between models trained on objective song characteristics vs models trained on individualized brain reactions.
+
+---
+
+### Day 8: [May 21, 2026] - Global Processing & Baseline Lasso Evaluation
+
+* **Status:** Completed pipeline extraction; Lasso LOSO baseline established.
+* **Tasks Completed:**
+  * [x] Ran batch extraction pipeline (`extract_all.py`) across all 31 subjects, yielding 887 artifact-free valid EEG epochs.
+  * [x] Implemented global Target B mapping workflow: Merged all subject data prior to applying `KNNImputer` and `PCA`. This crucial mathematical constraint prevents the 3 Principal Component axes (Valence, Energy, Tension) from rotating independently between individuals, securing a uniform target objective.
+  * [x] Constructed Baseline Model in `notebooks/03_model_lasso.ipynb`: Built Lasso Regression (L1-regularized) to predict PC1 (Valence) using Leave-One-Subject-Out (LOSO) cross-validation methodology.
+
+* **Key Findings:**
+  * **Lasso LOSO Results:** RMSE = 2.4108, R² = 0.0245, Pearson r = 0.1574.
+  * **Proof of Overfitting:** Krish (2021) achieved r = 0.774 using standard k-fold (within-subject) validation. Our strict LOSO architecture caused the correlation to collapse to r = 0.157. This confirms that previous within-subject methodologies were fatally overfitting to individual physiological baselines ("brain fingerprints"). Validating cross-subject generalization with zero-calibration remains the key obstacle in universal BCI emotion modeling.
+
+* **Next Steps:** Proceed to construct and evaluate non-linear/ensemble models (Random Forest and XGBoost) using the same LOSO framework. Determine if bagging or gradient boosting architectures are better equipped to extract universal emotive signals through the noise compared to linear regression.

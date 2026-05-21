@@ -8,7 +8,7 @@ import warnings
 # Suppress verbose warnings from MNE during batch processing
 warnings.filterwarnings('ignore')
 
-from eeg_utils import load_and_epoch_eeg, perform_ica, reject_artifacts
+from eeg_utils import load_and_epoch_eeg, perform_ica, reject_artifacts, extract_subjective_ratings
 from features import extract_eeg_features_from_epochs
 from audio_utils import batch_extract_audio_features
 
@@ -75,6 +75,16 @@ def main():
                 
                 # Extract EEG ML Features
                 eeg_feats = extract_eeg_features_from_epochs(clean_epochs)
+                
+                # Extract Target B Raw Ratings (with NaNs)
+                events_df = pd.read_csv(tsv_path, sep='\t')
+                raw_ratings = extract_subjective_ratings(events_df)
+                
+                # Merge target B ratings into eeg_feats on track_id
+                # (Since it's a single run, track_id is unique per epoch)
+                eeg_feats_df = pd.DataFrame(eeg_feats)
+                eeg_feats_df = pd.merge(eeg_feats_df, raw_ratings.drop(columns=['event_idx']), on='track_id', how='left')
+                eeg_feats = eeg_feats_df.to_dict('records')
                 
                 for f in eeg_feats:
                     # also record which run we used
