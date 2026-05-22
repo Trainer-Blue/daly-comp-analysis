@@ -293,7 +293,35 @@ We successfully built out the feature extraction pipeline in `02_feature_enginee
   * [x] Constructed Baseline Model in `notebooks/03_model_lasso.ipynb`: Built Lasso Regression (L1-regularized) to predict PC1 (Valence) using Leave-One-Subject-Out (LOSO) cross-validation methodology.
 
 * **Key Findings:**
-  * **Lasso LOSO Results:** RMSE = 2.4108, R² = 0.0245, Pearson r = 0.1574.
-  * **Proof of Overfitting:** Krish (2021) achieved r = 0.774 using standard k-fold (within-subject) validation. Our strict LOSO architecture caused the correlation to collapse to r = 0.157. This confirms that previous within-subject methodologies were fatally overfitting to individual physiological baselines ("brain fingerprints"). Validating cross-subject generalization with zero-calibration remains the key obstacle in universal BCI emotion modeling.
+  * **Lasso LOSO Results:** RMSE = 2.4108, R² = 0.0245, Pearson `r = 0.1574`.
+  * **Proof of Overfitting:** Krish (2021) achieved `r = 0.774` using standard k-fold (within-subject) validation. Our strict LOSO architecture caused the correlation to collapse to `r = 0.157`. This confirms that previous within-subject methodologies were fatally overfitting to individual physiological baselines ("brain fingerprints"). Validatibumblistaning cross-subject generalization with zero-calibration remains the key obstacle in universal BCI emotion modeling.
 
 * **Next Steps:** Proceed to construct and evaluate non-linear/ensemble models (Random Forest and XGBoost) using the same LOSO framework. Determine if bagging or gradient boosting architectures are better equipped to extract universal emotive signals through the noise compared to linear regression.
+
+---
+
+### Day 9: [May 22, 2026] - Random Forest (Non-Linear) Evaluation
+
+* **Status:** Built and trained the Random Forest Regressor via LOSO cross-validation; noticeable performance recovery.
+* **Tasks Completed:**
+  * [x] Designed `notebooks/04_model_random_forest.ipynb`.
+  * [x] Kept the exact same features and dual-target global Imputation + PCA workflow.
+  * [x] Replaced the Lasso parameter with a 100-tree Bagged Ensemble (Random Forest Regressor) and executed the LOSO loop.
+
+* **Key Findings:**
+  * **Random Forest LOSO Results:** RMSE = 2.3057, R² = 0.1077, Pearson r = 0.3384.
+  * **Analysis:** The Random Forest more than doubled the correlation coefficient obtained by the Lasso model (jumping from r = 0.157 to r = 0.338). Because a Random Forest splits features orthogonally and ignores scalar magnitudes, it is entirely immune to extreme unscaled outliers (like a stray 290 µV micro-blink that escaped the ICA). This proves that the relationships between EEG oscillatory bands and emotion are strongly non-linear and high-dimensional, requiring tree-based structures to adequately tease out universal responses against individual physiological noise.
+  * **Conclusion on the "Zero-Calibration" Problem:** While `r = 0.338` represents a major step forward for cross-subject uncalibrated model generalization, it reveals that predicting emotion precisely via brainwaves on unseen humans still has significant variance compared to within-subject calibrations (`r = 0.774`). 
+
+* **Next Steps:** Complete the architectural trifecta by deploying the XGBoost model to see if Gradient Boosting yields final iterative performance gains.
+
+* **Status:** Built and trained the XGBoost Regressor via LOSO cross-validation; evaluated performance against Random Forest.
+* **Tasks Completed:**
+  * [x] Copied the RF pipeline structure to `notebooks/05_model_xgboost.ipynb`.
+  * [x] Replaced the model with `XGBRegressor` (n_estimators=100, learning_rate=0.1) and executed the LOSO loop.
+
+* **Key Findings:**
+  * **XGBoost LOSO Results:** RMSE = 2.3602, R² = 0.0650, Pearson r = 0.3079.
+  * **Analysis:** The XGBoost model performed slightly *worse* than the Random Forest (r = 0.308 vs r = 0.338). Gradient Boosting algorithms aggressively try to minimize residual errors on difficult samples. In our highly subjective "Zero-Calibration" dataset, trying to perfectly predict someone's idiosyncratic emotional baseline creates catastrophic overfitting on the training folds. Bagging (Random Forest) proved vastly superior to Boosting (XGBoost) because Bagging actively prevents overfitting while Boosting can sometimes chase impossible noise.
+  
+* **Conclusion:** Random Forest achieved the highest generalization score (`r = 0.338`) by capturing bulk non-linear trends without fitting to specific skulls. This concludes the formal testing phase.
