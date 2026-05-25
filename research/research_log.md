@@ -325,3 +325,39 @@ We successfully built out the feature extraction pipeline in `02_feature_enginee
   * **Analysis:** The XGBoost model performed slightly *worse* than the Random Forest (r = 0.308 vs r = 0.338). Gradient Boosting algorithms aggressively try to minimize residual errors on difficult samples. In our highly subjective "Zero-Calibration" dataset, trying to perfectly predict someone's idiosyncratic emotional baseline creates catastrophic overfitting on the training folds. Bagging (Random Forest) proved vastly superior to Boosting (XGBoost) because Bagging actively prevents overfitting while Boosting can sometimes chase impossible noise.
   
 * **Conclusion:** Random Forest achieved the highest generalization score (`r = 0.338`) by capturing bulk non-linear trends without fitting to specific skulls. This concludes the formal testing phase.
+
+---
+
+### Day 10: [May 23, 2026] - Full Target/Feature Benchmark Report
+
+* **Status:** Extended the LOSO benchmark from PC1 only to all three PCA targets and to a toy mean-ratings experiment.
+* **Tasks Completed:**
+  * [x] Reworked `notebooks/06_evaluate_all_pcs.ipynb` so that it evaluates three feature sets for each target family: combined EEG + audio, EEG only, and audio only.
+  * [x] Added progress logging for target-by-target and model-by-model evaluation so long runs are easier to monitor.
+  * [x] Benchmarked three models across both target families: Lasso, Random Forest, and XGBoost.
+
+* **What the table means:**
+  * The PCA targets are orthogonal by construction, so PC1 (Valence), PC2 (Energy), and PC3 (Tension) are separate regression problems. We therefore train a separate model for each PC instead of a single multi-output model.
+  * The metric of primary interest is Pearson correlation (`r`), because it measures whether the model tracks the shape of the target even when the absolute scale is imperfect.
+  * RMSE and $R^2$ provide complementary information: RMSE measures absolute error, while $R^2$ tells us whether the model improves over a trivial mean predictor.
+
+* **Toy mean-ratings experiment:**
+  * **Result:** All three models failed to produce meaningful positive correlation on the toy mean-ratings target. The correlations were near zero or negative, and $R^2$ was below zero for all models.
+  * **Interpretation:** This is not a useful scientific benchmark for the Daly/Krish setup. The mean of the imputed Likert ratings collapses the emotion structure too aggressively, so it does not behave like the PCA-derived affective axes. The toy target is useful only as a pipeline sanity check.
+
+* **Daly PCA targets:**
+  * **PC1 / Valence:** Best result came from Random Forest with `r = 0.3365`, followed by XGBoost at `r = 0.3000`, then Lasso at `r = 0.1574`.
+  * **PC2 / Energy:** Best result came from Random Forest with `r = 0.2256`, followed by XGBoost at `r = 0.1277`, then Lasso at `r = 0.0860`.
+  * **PC3 / Tension:** Best result came from Random Forest with `r = 0.2814`, followed by XGBoost at `r = 0.1777`, then Lasso at `r = 0.2108`.
+
+* **Feature-set comparison:**
+  * The combined EEG + audio feature set is not always the best. For PC1, audio-only slightly outperformed the combined set for Random Forest and XGBoost, which suggests that adding EEG sometimes injects noise rather than signal.
+  * For PC2 and PC3, the combined set was generally the strongest or tied for strongest, which is consistent with the idea that audio cues capture broad arousal structure while EEG contributes subject-specific information.
+  * EEG-only features were consistently weaker than audio-only or combined features in this benchmark, which implies that the current EEG summary features are informative but not sufficient by themselves for cross-subject generalization.
+
+* **Core conclusion:**
+  * The real Daly PCA targets do generalize better than chance under LOSO, but the values are still modest compared with within-subject literature results.
+  * Random Forest remains the strongest model overall on this dataset, but the margin over XGBoost is not huge and depends on the target.
+  * The main practical takeaway is that cross-subject emotion decoding is possible, but the problem is much harder than the within-subject literature suggests, and model performance depends strongly on whether the target is Valence, Energy, or Tension.
+
+* **Next Steps:** Use the full benchmark tables in the final paper, emphasizing that the Daly PCA targets are the meaningful comparison set while the mean-ratings experiment is a diagnostic side experiment.
