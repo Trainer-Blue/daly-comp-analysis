@@ -361,3 +361,27 @@ We successfully built out the feature extraction pipeline in `02_feature_enginee
   * The main practical takeaway is that cross-subject emotion decoding is possible, but the problem is much harder than the within-subject literature suggests, and model performance depends strongly on whether the target is Valence, Energy, or Tension.
 
 * **Next Steps:** Use the full benchmark tables in the final paper, emphasizing that the Daly PCA targets are the meaningful comparison set while the mean-ratings experiment is a diagnostic side experiment.
+
+---
+
+### Day 11: [May 31, 2026] - Feature Ablation, Brain Fingerprint Validation, & Gap Analysis
+
+* **Status:** Identified critical feature blindspots via ablation study; drafted progress update for supervisor.
+* **Tasks Completed:**
+  * [x] Conducted Progressive Feature Ablation comparing Audio-only, EEG-only, and Combined features.
+  * [x] Discovered Audio-only outperformed Combined for Valence (r = 0.375 vs r = 0.336), indicating subjective EEG features act as noise without proper feature selection.
+  * [x] Investigated poor Energy prediction (r = 0.216) and audited the feature matrix. Identified a critical engineering flaw: our pipeline missed rhythmic features (Tempo/BPM, ZCR), which are the primary acoustic drivers for Arousal/Energy.
+  * [x] Ran a Random 80/20 Split experiment pooling all epochs to test the "Brain Fingerprint" hypothesis. Performance artificially inflated from r = 0.157 (LOSO) to r = 0.28. This definitively proves that within-subject validation simply rote-memorizes individual physiological baselines rather than true emotional biomarkers.
+  * [x] Audited Daly (2015) and Krish (2021) methodologies against our pipeline and found key missing extraction steps: Prefrontal Asymmetry (F3-F4) for EEG Valence, Wavelet Entropy for EEG Energy, and Recursive Feature Elimination (RFE) to curb the curse of dimensionality.
+  * [x] Drafted a detailed update email to supervisor (Amritanjali) outlining these exact findings, ablations, and the roadmap for upcoming methodological corrections.
+
+* **Key Findings:**
+  * **The Rhythm/Arousal Gap:** Arousal/Energy models underperformed because current audio features (MFCCs, Chroma) map exclusively to Timbre and Harmony (which predict Valence well), leaving the model blind to rhythmic density. 
+  * **The Asymmetry Gap:** Valence relies heavily on relative spatial differences (Frontal Alpha Asymmetry), which normalizes well across subjects. This explains why Valence generalizes better than Arousal in cross-subject LOSO, as Arousal relies on absolute high-frequency bands that shift with global resting baselines.
+
+* **Next Steps (Feature Parity Pipeline Update):** 
+  1. Add Librosa rhythm/spectral features (`beat_track`, `zero_crossing_rate`, `spectral_contrast`, `tonnetz`) to `audio_utils.py`.
+  2. Implement mathematical extraction for Frontal Asymmetry and Wavelet Entropy in `features.py`.
+  3. Re-run feature extraction and introduce Recursive Feature Elimination (RFE) inside the CV loops in model notebooks.
+
+
